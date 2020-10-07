@@ -18,10 +18,8 @@ link_directories(${TCAMLIB_LIBRARY_DIRS})
 add_definitions(${GSTREAMER_CFLAGS_OTHER})  
 
 add_executable(tcamopencvsaveimage main.cpp tcamcamera.cpp )
-add_executable(opencv_gstreamer    opencv_gstreamer.cpp )
 
 target_link_libraries(tcamopencvsaveimage ${TCAMLIB_LIBRARIES} ${GSTREAMER_LIBRARIES} ${OpenCV_LIBS} )
-target_link_libraries(opencv_gstreamer                         ${GSTREAMER_LIBRARIES} ${OpenCV_LIBS} )
 
 
 install(TARGETS tcamopencvsaveimage RUNTIME DESTINATION bin)

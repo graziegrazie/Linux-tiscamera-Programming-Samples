@@ -169,7 +169,8 @@ class TcamCamera
 			gst_object_unref( pipeline_ );
 			pipeline_ = other.pipeline_;
 			other.pipeline_ = nullptr;
-		}
+            return *this;
+		};
 
 
         /*
