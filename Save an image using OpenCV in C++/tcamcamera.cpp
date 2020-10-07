@@ -268,10 +268,11 @@ TcamCamera::TcamCamera(std::string serial = "")
     if (serial != "")
         g_object_set(tcambin_, "serial", serial.c_str(), nullptr);
     ensure_ready_state();
-    GstElement *src = gst_bin_get_by_name(GST_BIN(tcambin_), "tcambin-source");
-    assert(src);
-    g_object_set(src, "do-timestamp", false, nullptr);
-    gst_object_unref(src);
+    //GstElement *src = gst_bin_get_by_name(GST_BIN(tcambin_), "tcambin-source");
+    //assert(src);
+    //g_object_set(src, "do-timestamp", false, nullptr);
+    g_object_set(tcamsrc_, "do-timestamp", false, nullptr);
+    //gst_object_unref(src);
 
     videocaps_ = initialize_format_list();
 }
@@ -289,17 +290,24 @@ TcamCamera::create_pipeline()
     tcambin_ = gst_element_factory_make("tcambin", nullptr);
     if (!tcambin_)
         throw std::runtime_error("'tcambin' could not be initialized! Check tiscamera installation");
+    tcamsrc_    = gst_element_factory_make("tcamsrc", nullptr); 
     capturecapsfilter_ = gst_element_factory_make("capsfilter", nullptr);
+    GstElement *tcamdutils_ = gst_element_factory_make("tcamdutils", nullptr);
     tee_ = gst_element_factory_make("tee", "tee");
     GstElement *queue = gst_element_factory_make("queue", nullptr);
     capturesink_ = gst_element_factory_make("appsink", nullptr);
     g_object_set(capturesink_, "max-buffers", 4, "drop", true, nullptr);
-    assert(pipeline_ && tee_ && capturecapsfilter_ && queue && capturesink_);
+    //assert(pipeline_ && tee_ && capturecapsfilter_ && queue && capturesink_);
+    assert(pipeline_ && tee_ && capturecapsfilter_ && tcamdutils_ && queue && capturesink_);
 
 
     gst_bin_add_many(GST_BIN(pipeline_),
-                     tcambin_, capturecapsfilter_, tee_, queue, capturesink_, nullptr);
-    assert(gst_element_link_many(tcambin_, capturecapsfilter_, tee_, queue, capturesink_, nullptr));
+                     //tcambin_, capturecapsfilter_, tee_, queue, capturesink_, nullptr);
+                     tcamsrc_, capturecapsfilter_, tcamdutils_, tee_, queue, capturesink_, nullptr);
+                     //tcamsrc_, capturecapsfilter_, tcamdutils_, capturesink_, nullptr);
+    //assert(gst_element_link_many(tcambin_, capturecapsfilter_, tee_, queue, capturesink_, nullptr));
+    assert(gst_element_link_many(tcamsrc_, capturecapsfilter_, tcamdutils_, tee_, queue, capturesink_, nullptr));
+    //assert(gst_element_link_many(tcamsrc_, capturecapsfilter_, tcamdutils_, capturesink_, nullptr));
 }
 
 void
@@ -548,7 +556,8 @@ TcamCamera::set_property(std::string name, GValue &value)
 void
 TcamCamera::set_capture_format(std::string format, FrameSize size, FrameRate framerate)
 {
-    GstCaps *caps = gst_caps_new_simple("video/x-raw",
+    //GstCaps *caps = gst_caps_new_simple("video/x-raw",
+    GstCaps *caps = gst_caps_new_simple("video/x-bayer",
                                         "width", G_TYPE_INT, size.width,
                                         "height", G_TYPE_INT, size.height,
                                         "framerate", GST_TYPE_FRACTION, framerate.numerator, framerate.denominator,
@@ -614,11 +623,14 @@ TcamCamera::enable_video_display(GstElement *displaysink)
         return;
     displaybin_ = gst_element_factory_make("bin", nullptr);
     GstElement *queue = gst_element_factory_make("queue", nullptr);
+    GstElement *biteater = gst_element_factory_make("tcambiteater", nullptr);
     GstElement *convert = gst_element_factory_make("videoconvert", nullptr);
     GstElement *capsfilter = gst_element_factory_make("capsfilter", nullptr);
     gst_bin_add(GST_BIN(pipeline_), displaybin_);
-    gst_bin_add_many(GST_BIN(displaybin_), queue, convert, capsfilter, displaysink, nullptr);
-    if (!gst_element_link_many(tee_, queue, convert, capsfilter, displaysink, nullptr))
+    //gst_bin_add_many(GST_BIN(displaybin_), queue, convert, capsfilter, displaysink, nullptr);
+    gst_bin_add_many(GST_BIN(displaybin_), queue, biteater, convert, capsfilter, displaysink, nullptr);
+    //if (!gst_element_link_many(tee_, queue, convert, capsfilter, displaysink, nullptr))
+    if (!gst_element_link_many(tee_, queue, biteater, convert, capsfilter, displaysink, nullptr))
         throw std::runtime_error("Could not link elements");
 }
 

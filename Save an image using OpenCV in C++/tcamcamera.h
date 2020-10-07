@@ -225,6 +225,9 @@ class TcamCamera
     private:
         GstElement *pipeline_ = nullptr;
         GstElement *tcambin_ = nullptr;
+
+        GstElement *tcamsrc_ = nullptr;
+
         GstElement *capturecapsfilter_ = nullptr;
         GstElement *tee_ = nullptr;
         GstElement *capturesink_ = nullptr;

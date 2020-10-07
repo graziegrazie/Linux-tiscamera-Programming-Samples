@@ -19,6 +19,10 @@ GStreamer code and property handling. Adapt the CMakeList.txt accordingly.
 
 using namespace gsttcam;
 
+#define DATA_FORMAT  "rggb16"
+//#define DATA_FORMAT  "rggb"
+#define DEBUG
+
 // Create a custom data structure to be passed to the callback function. 
 typedef struct
 {
@@ -45,6 +49,7 @@ void ListProperties(TcamCamera &cam)
 // Callback called for new images by the internal appsink
 GstFlowReturn new_frame_cb(GstAppSink *appsink, gpointer data)
 {
+    //printf("new_frame_cb\n");
     int width, height ;
     const GstStructure *str;
 
@@ -74,18 +79,51 @@ GstFlowReturn new_frame_cb(GstAppSink *appsink, gpointer data)
         // Get a string containg the pixel format, width and height of the image        
         str = gst_caps_get_structure (caps, 0);    
 
-        if( strcmp( gst_structure_get_string (str, "format"),"BGRx") == 0)  
+#ifdef DEBUG
+        printf("data format = %s\n", gst_structure_get_string (str, "format"));
+#endif
+
+        ///if( strcmp( gst_structure_get_string (str, "format"), DATA_FORMAT) == 0)  
+        if( true )
         {
             // Now query the width and height of the image
             gst_structure_get_int (str, "width", &width);
             gst_structure_get_int (str, "height", &height);
 
             // Create a cv::Mat, copy image data into that and save the image.
+#ifdef DEBUG
+#if 1 //16bit
+            pCustomData->frame.create(height,width,CV_16UC(1));
+            cv::Mat temp(height, width, CV_16UC(3));
+            memcpy( pCustomData->frame.data, info.data, width*height*2);
+            //cv::cvtColor(pCustomData->frame, temp, cv::COLOR_BayerRG2BGR);
+#else
+            pCustomData->frame.create(height,width,CV_8UC(1));
+            cv::Mat temp(height, width, CV_8UC(3));
+            memcpy( pCustomData->frame.data, info.data, width*height);
+            //cv::cvtColor(pCustomData->frame, temp, cv::COLOR_BayerRG2BGR);
+#endif
+            cv::cvtColor(pCustomData->frame, temp, cv::COLOR_BayerRG2RGB);
+            char ImageFileName[256];
+            sprintf(ImageFileName,"image%05d.png", pCustomData->ImageCounter);
+            //cv::imwrite(ImageFileName,pCustomData->frame);
+            cv::imwrite(ImageFileName, temp);
+#if 0
+            // save bayer data as xml file
+            char XMLFileName[256];
+            sprintf(XMLFileName,"image%05d.xml", pCustomData->ImageCounter);
+
+            cv::FileStorage xml_file(XMLFileName, cv::FileStorage::WRITE);
+            //xml_file.writeRaw(std::string("u"), pCustomData->frame.data, pCustomData->frame.elemSize());
+            xml_file << "data" << pCustomData->frame;
+#endif
+#else
             pCustomData->frame.create(height,width,CV_8UC(4));
             memcpy( pCustomData->frame.data, info.data, width*height*4);
             char ImageFileName[256];
             sprintf(ImageFileName,"image%05d.jpg", pCustomData->ImageCounter);
             cv::imwrite(ImageFileName,pCustomData->frame);
+#endif
         }
 
     }
@@ -108,30 +146,47 @@ int main(int argc, char **argv)
     CustomData.ImageCounter = 0;
     CustomData.SaveNextImage = false;
 
+    std::shared_ptr<Property> ExposureAuto = NULL;
+    std::shared_ptr<Property> ExposureValue = NULL;
+    std::shared_ptr<Property> GainAuto = NULL;
+    std::shared_ptr<Property> GainValue = NULL;
     
     printf("Tcam OpenCV Image Sample\n");
 
     // Open camera by serial number
-    TcamCamera cam("427119953");
+    TcamCamera cam("45710317");
     
     // Set video format, resolution and frame rate
-    cam.set_capture_format("BGRx", FrameSize{640,480}, FrameRate{30,1});
+    printf("set_capture_format\n");
+    //cam.set_capture_format(DATA_FORMAT, FrameSize{1920,1080}, FrameRate{15,1});
+    cam.set_capture_format(DATA_FORMAT, FrameSize{4096,3000}, FrameRate{15,1});
+    //cam.set_capture_format(DATA_FORMAT, FrameSize{640,480}, FrameRate{30,1});
 
     // Comment following line, if no live video display is wanted.
     cam.enable_video_display(gst_element_factory_make("ximagesink", NULL));
 
     // Register a callback to be called for each new frame
+    printf("set_new_frame_callback\n");
     cam.set_new_frame_callback(new_frame_cb, &CustomData);
     
     // Start the camera
+    printf("start\n");
     cam.start();
+
+#if 1
+    ExposureAuto = cam.get_property("Exposure Auto");
+    ExposureAuto->set(cam,0);
+    ExposureValue = cam.get_property("Exposure");
+    //ExposureValue->set(cam,185100);
+    ExposureValue->set(cam,50000);
+#endif
 
     // Uncomment following line, if properties shall be listed. Many of the
     // properties that are done in software are available after the stream 
     // has started. Focus Auto is one of them.
     // ListProperties(cam);
 
-    for( int i = 0; i< 10; i++)
+    for( int i = 0; i< 20; i++)
     {
         CustomData.SaveNextImage = true; // Save the next image in the callcack call
         sleep(2);
