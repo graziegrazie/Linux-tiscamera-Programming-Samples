@@ -268,11 +268,7 @@ TcamCamera::TcamCamera(std::string serial = "")
     if (serial != "")
         g_object_set(tcambin_, "serial", serial.c_str(), nullptr);
     ensure_ready_state();
-    //GstElement *src = gst_bin_get_by_name(GST_BIN(tcambin_), "tcambin-source");
-    //assert(src);
-    //g_object_set(src, "do-timestamp", false, nullptr);
     g_object_set(tcamsrc_, "do-timestamp", false, nullptr);
-    //gst_object_unref(src);
 
     videocaps_ = initialize_format_list();
 }
@@ -297,17 +293,12 @@ TcamCamera::create_pipeline()
     GstElement *queue = gst_element_factory_make("queue", nullptr);
     capturesink_ = gst_element_factory_make("appsink", nullptr);
     g_object_set(capturesink_, "max-buffers", 4, "drop", true, nullptr);
-    //assert(pipeline_ && tee_ && capturecapsfilter_ && queue && capturesink_);
     assert(pipeline_ && tee_ && capturecapsfilter_ && tcamdutils_ && queue && capturesink_);
 
 
     gst_bin_add_many(GST_BIN(pipeline_),
-                     //tcambin_, capturecapsfilter_, tee_, queue, capturesink_, nullptr);
                      tcamsrc_, capturecapsfilter_, tcamdutils_, tee_, queue, capturesink_, nullptr);
-                     //tcamsrc_, capturecapsfilter_, tcamdutils_, capturesink_, nullptr);
-    //assert(gst_element_link_many(tcambin_, capturecapsfilter_, tee_, queue, capturesink_, nullptr));
     assert(gst_element_link_many(tcamsrc_, capturecapsfilter_, tcamdutils_, tee_, queue, capturesink_, nullptr));
-    //assert(gst_element_link_many(tcamsrc_, capturecapsfilter_, tcamdutils_, capturesink_, nullptr));
 }
 
 void
@@ -558,6 +549,24 @@ TcamCamera::set_capture_format(std::string format, FrameSize size, FrameRate fra
 {
     //GstCaps *caps = gst_caps_new_simple("video/x-raw",
     GstCaps *caps = gst_caps_new_simple("video/x-bayer",
+                                        "width", G_TYPE_INT, size.width,
+                                        "height", G_TYPE_INT, size.height,
+                                        "framerate", GST_TYPE_FRACTION, framerate.numerator, framerate.denominator,
+                                        nullptr);
+    assert(caps);
+    if(format != "")
+        gst_caps_set_simple(caps, "format", G_TYPE_STRING, format.c_str(), nullptr);
+
+    g_object_set(G_OBJECT(capturecapsfilter_), "caps", caps, nullptr);
+    gst_caps_unref(caps);
+}
+
+void
+TcamCamera::set_capture_format(std::string type, std::string format, FrameSize size, FrameRate framerate)
+{
+    std::string media_type = std::string("video/x-") + type;
+    std::cout << "set_capture_format = " << media_type << std::endl;
+    GstCaps *caps = gst_caps_new_simple(media_type.c_str(),
                                         "width", G_TYPE_INT, size.width,
                                         "height", G_TYPE_INT, size.height,
                                         "framerate", GST_TYPE_FRACTION, framerate.numerator, framerate.denominator,

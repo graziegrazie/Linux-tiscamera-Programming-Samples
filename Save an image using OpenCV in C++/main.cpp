@@ -17,11 +17,21 @@ GStreamer code and property handling. Adapt the CMakeList.txt accordingly.
 
 #include "opencv2/opencv.hpp"
 
+
+
 using namespace gsttcam;
 
-#define DATA_FORMAT  "rggb16"
-//#define DATA_FORMAT  "rggb"
+//#define DATA_FORMAT  "rggb16"
 #define DEBUG
+
+
+#define TISCAMERA_SERIAL_NO                "45710317"
+#define TISCAMERA_IMAGE_TYPE               "bayer"
+#define TISCAMERA_IMAGE_FORMAT             "rggb16"
+#define TISCAMERA_FRAME_SIZE_WIDTH         (4096)
+#define TISCAMERA_FRAME_SIZE_HEIGHT        (3000)
+#define TISCAMERA_FRAME_RATE_NUMERATOR     (5)
+#define TISCAMERA_FRAME_RATE_DENOMINATOR   (5)
 
 // Create a custom data structure to be passed to the callback function. 
 typedef struct
@@ -136,6 +146,8 @@ GstFlowReturn new_frame_cb(GstAppSink *appsink, gpointer data)
     return GST_FLOW_OK;
 }
 
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
@@ -154,16 +166,19 @@ int main(int argc, char **argv)
     printf("Tcam OpenCV Image Sample\n");
 
     // Open camera by serial number
-    TcamCamera cam("45710317");
-    
+#if 1
+    //TcamCamera cam("45710317");
+    TcamCamera cam(TISCAMERA_SERIAL_NO);
+
     // Set video format, resolution and frame rate
     printf("set_capture_format\n");
-    //cam.set_capture_format(DATA_FORMAT, FrameSize{1920,1080}, FrameRate{15,1});
-    cam.set_capture_format(DATA_FORMAT, FrameSize{4096,3000}, FrameRate{15,1});
-    //cam.set_capture_format(DATA_FORMAT, FrameSize{640,480}, FrameRate{30,1});
+    //cam.set_capture_format(DATA_FORMAT, FrameSize{4096,3000}, FrameRate{15,1});
+    cam.set_capture_format(TISCAMERA_IMAGE_TYPE, TISCAMERA_IMAGE_FORMAT,
+                           FrameSize{TISCAMERA_FRAME_SIZE_WIDTH,     TISCAMERA_FRAME_SIZE_HEIGHT},
+                           FrameRate{TISCAMERA_FRAME_RATE_NUMERATOR, TISCAMERA_FRAME_RATE_DENOMINATOR});
 
     // Comment following line, if no live video display is wanted.
-    cam.enable_video_display(gst_element_factory_make("ximagesink", NULL));
+    //cam.enable_video_display(gst_element_factory_make("ximagesink", NULL));
 
     // Register a callback to be called for each new frame
     printf("set_new_frame_callback\n");
@@ -173,7 +188,7 @@ int main(int argc, char **argv)
     printf("start\n");
     cam.start();
 
-#if 1
+#if 0
     ExposureAuto = cam.get_property("Exposure Auto");
     ExposureAuto->set(cam,0);
     ExposureValue = cam.get_property("Exposure");
@@ -186,10 +201,10 @@ int main(int argc, char **argv)
     // has started. Focus Auto is one of them.
     // ListProperties(cam);
 
-    for( int i = 0; i< 20; i++)
+    for( int i = 0; i< 10; i++)
     {
         CustomData.SaveNextImage = true; // Save the next image in the callcack call
-        sleep(2);
+        sleep(1);
     }
 
 
@@ -199,6 +214,6 @@ int main(int argc, char **argv)
     scanf("%c",dummyvalue);
 
     cam.stop();
-
+#endif
     return 0;
 }
