@@ -565,7 +565,6 @@ void
 TcamCamera::set_capture_format(std::string type, std::string format, FrameSize size, FrameRate framerate)
 {
     std::string media_type = std::string("video/x-") + type;
-    std::cout << "set_capture_format = " << media_type << std::endl;
     GstCaps *caps = gst_caps_new_simple(media_type.c_str(),
                                         "width", G_TYPE_INT, size.width,
                                         "height", G_TYPE_INT, size.height,

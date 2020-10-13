@@ -16,8 +16,8 @@ GStreamer code and property handling. Adapt the CMakeList.txt accordingly.
 #include <unistd.h>
 
 #include "opencv2/opencv.hpp"
-
-
+#include "common.h"
+#include <image_saver.h>
 
 using namespace gsttcam;
 
@@ -31,7 +31,9 @@ using namespace gsttcam;
 #define TISCAMERA_FRAME_SIZE_WIDTH         (4096)
 #define TISCAMERA_FRAME_SIZE_HEIGHT        (3000)
 #define TISCAMERA_FRAME_RATE_NUMERATOR     (5)
-#define TISCAMERA_FRAME_RATE_DENOMINATOR   (5)
+#define TISCAMERA_FRAME_RATE_DENOMINATOR   (1)
+
+std::string image_save_directory_name;
 
 // Create a custom data structure to be passed to the callback function. 
 typedef struct
@@ -90,7 +92,7 @@ GstFlowReturn new_frame_cb(GstAppSink *appsink, gpointer data)
         str = gst_caps_get_structure (caps, 0);    
 
 #ifdef DEBUG
-        printf("data format = %s\n", gst_structure_get_string (str, "format"));
+        printf("data format = %s\n",  gst_structure_get_string (str, "format"));
 #endif
 
         ///if( strcmp( gst_structure_get_string (str, "format"), DATA_FORMAT) == 0)  
@@ -117,7 +119,9 @@ GstFlowReturn new_frame_cb(GstAppSink *appsink, gpointer data)
             char ImageFileName[256];
             sprintf(ImageFileName,"image%05d.png", pCustomData->ImageCounter);
             //cv::imwrite(ImageFileName,pCustomData->frame);
-            cv::imwrite(ImageFileName, temp);
+            //cv::imwrite(ImageFileName, temp);
+            std::string hoge = image_save_directory_name + std::string("/") + std::string(ImageFileName);
+            cv::imwrite(hoge.c_str(), temp);
 #if 0
             // save bayer data as xml file
             char XMLFileName[256];
@@ -146,7 +150,19 @@ GstFlowReturn new_frame_cb(GstAppSink *appsink, gpointer data)
     return GST_FLOW_OK;
 }
 
+void save_camera_parameters_to_config_file(std::string file_path, TISCameraCfg& cfg)
+{
+    assert("" != file_path);
 
+    std::ofstream ofs(file_path);
+    assert(ofs);
+
+    ofs << "serial: "     << cfg.serial << std::endl;
+    ofs << "type: "       << "video/x-" << cfg.type << std::endl;
+    ofs << "format: "     << cfg.format << std::endl;
+    ofs << "frame_size: " << "{" << cfg.frame_size.width     << ", " << cfg.frame_size.height      << "}" << std::endl;
+    ofs << "frame_rate: " << "{" << cfg.frame_rate.numerator << ", " << cfg.frame_rate.denominator << "}" << std::endl;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
@@ -164,15 +180,28 @@ int main(int argc, char **argv)
     std::shared_ptr<Property> GainValue = NULL;
     
     printf("Tcam OpenCV Image Sample\n");
+//
+    //std::string image_save_directory_name;
+#if 0
+    make_directory_with_current_date_as_name(image_save_directory_name);
+    
+    TISCameraCfg cfg{};
+    cfg.serial                 = TISCAMERA_SERIAL_NO;
+    cfg.format                 = TISCAMERA_IMAGE_FORMAT;
+    cfg.type                   = TISCAMERA_IMAGE_TYPE;
+    cfg.frame_size.width       = TISCAMERA_FRAME_SIZE_WIDTH;
+    cfg.frame_size.height      = TISCAMERA_FRAME_SIZE_HEIGHT;
+    cfg.frame_rate.numerator   = TISCAMERA_FRAME_RATE_NUMERATOR;
+    cfg.frame_rate.denominator = TISCAMERA_FRAME_RATE_DENOMINATOR;
+
+    std::string file_path = image_save_directory_name + std::string("/config.txt");
+    save_camera_parameters_to_config_file(file_path, cfg);
+//
 
     // Open camera by serial number
-#if 1
-    //TcamCamera cam("45710317");
     TcamCamera cam(TISCAMERA_SERIAL_NO);
 
     // Set video format, resolution and frame rate
-    printf("set_capture_format\n");
-    //cam.set_capture_format(DATA_FORMAT, FrameSize{4096,3000}, FrameRate{15,1});
     cam.set_capture_format(TISCAMERA_IMAGE_TYPE, TISCAMERA_IMAGE_FORMAT,
                            FrameSize{TISCAMERA_FRAME_SIZE_WIDTH,     TISCAMERA_FRAME_SIZE_HEIGHT},
                            FrameRate{TISCAMERA_FRAME_RATE_NUMERATOR, TISCAMERA_FRAME_RATE_DENOMINATOR});
@@ -200,13 +229,11 @@ int main(int argc, char **argv)
     // properties that are done in software are available after the stream 
     // has started. Focus Auto is one of them.
     // ListProperties(cam);
-
     for( int i = 0; i< 10; i++)
     {
         CustomData.SaveNextImage = true; // Save the next image in the callcack call
         sleep(1);
     }
-
 
     // Simple implementation of "getch()"
     printf("Press Enter to end the program");
@@ -215,5 +242,32 @@ int main(int argc, char **argv)
 
     cam.stop();
 #endif
+    CameraParam param;
+    param.serial_num = TISCAMERA_SERIAL_NO;
+    param.data_format = "rggb16";
+    param.data_type   = "bayer";
+    
+    param.frame_rate = {15, 1};
+    param.frame_size = {4096, 3000};
+
+    param.is_color  = true;;
+    param.bit_depth = 12;
+
+    ImageSaver* saver = new ImageSaver(TISCAMERA_SERIAL_NO);
+    saver->setParam(param);
+
+    std::string file_path = saver->save_directory_name_ + std::string("/config.txt");
+    saver->saveParamToConfigFile(param, file_path);
+    saver->setCaptureCallback(&CustomData);
+    saver->startCameraCapture();
+
+    for( int i = 0; i< 10; i++)
+    {
+        CustomData.SaveNextImage = true; // Save the next image in the callcack call
+        sleep(1);
+    }
+
+    saver->stopCameraCapture();
+
     return 0;
 }
