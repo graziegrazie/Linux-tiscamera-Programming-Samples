@@ -1,0 +1,31 @@
+project(tcamopencvsaveimage)
+ 
+cmake_minimum_required(VERSION 2.6)
+set(CMAKE_CXX_STANDARD 11)
+
+find_package(PkgConfig REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(yaml-cpp REQUIRED)
+#message(${yaml-cpp_INCLUDE_DIRS})
+
+set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:$ENV{HOME}/.local/lib/pkgconfig")
+#set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:$ENV{HOME}/.local/share/pkgconfig")
+#set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/opt/ros/foxy/share/rcl_yaml/pkgconfig")
+#set(ENV{CMAKE_PREFIX_PATH} "$ENV{CMAKE_PREFIX_PATH}:/opt/ros/foxy/)
+#set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:/opt/ros/foxy/opt/yaml_cpp_vendor/lib/pkgconfig/")
+
+pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0)
+pkg_check_modules(TCAMLIB tcam)
+#pkg_check_modules(YAML_CPP yaml-cpp)
+
+include_directories( include ${CMAKE_CURRENT_BINARY_DIR}  ${GSTREAMER_INCLUDE_DIRS} ${TCAMLIB_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIRS})
+
+add_executable(tcamopencvsaveimage main.cpp tcamcamera.cpp )
+#add_executable(test_yaml_cpp       test_yaml_cpp.cpp common.cpp )
+
+target_link_libraries(tcamopencvsaveimage ${TCAMLIB_LIBRARIES} ${GSTREAMER_LIBRARIES} ${OpenCV_LIBS} )
+#target_link_libraries(test_yaml_cpp       ${TCAMLIB_LIBRARIES} ${GSTREAMER_LIBRARIES} ${OpenCV_LIBS} ${YAML_CPP_LIBRARIES})
+message("TCAMLIB_LIBRARIES")
+message(${TCAMLIB_LIBRARIES})
+
+#install(TARGETS tcamopencvsaveimage RUNTIME DESTINATION bin)

@@ -1,0 +1,14 @@
+image_width: 640
+image_height: 480
+camera_name: narrow_stereo/left
+camera_matrix:
+  rows: 3
+# serial: 45710317
+# format: bayer
+# type: rggb16
+# FrameRate:
+#    numerator: 15
+#    denominator: 1
+# FrameSize:
+#    width: 4092
+#    height: 3000

@@ -150,7 +150,6 @@ private:
 };
 
 // TODO: this struct should be separated from this file
-/*
 using TISCameraCfg = struct TISCameraCfg_
 {
     std::string serial;   // serial number of a TIS camera
@@ -159,7 +158,7 @@ using TISCameraCfg = struct TISCameraCfg_
     gsttcam::FrameSize frame_size;
     gsttcam::FrameRate frame_rate;
 };
-*/
+
 class TcamCamera
 {
     public:
@@ -254,10 +253,6 @@ class TcamCamera
         void ensure_ready_state();
         void create_pipeline();
         std::vector<VideoFormatCaps> initialize_format_list();
-
-    // these parameters are to save values for recording
-    // TODO: these should be separated from tiscamera module
-        //TISCameraCfg config_ = {0};
 };
 
 std::vector<CameraInfo>get_device_list();

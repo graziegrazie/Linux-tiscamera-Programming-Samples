@@ -111,7 +111,6 @@ GstFlowReturn ImageSaver::captureCallback(GstAppSink *appsink, gpointer data)
     
     if( NULL == info.data )
     {
-        std::cout << "cb 0" << std::endl;
         gst_buffer_unmap(buffer, &info);
         gst_sample_unref(sample);
 
@@ -119,108 +118,36 @@ GstFlowReturn ImageSaver::captureCallback(GstAppSink *appsink, gpointer data)
     }
     else
     {
-        std::cout << "cb 1" << std::endl;
         // keep going
-    }
-
-    int num_of_pixel_byte = (int)ceil(this->param_.bit_depth / 8.0);
-    int num_of_channel;
-    if( 3 == this->param_.is_color )
-    {
-        std::cout << "cb 2" << std::endl;
-        if( this->param_.data_format.find("x") >= 0 )
-        {
-            std::cout << "cb 2-1" << std::endl;
-            // in this case, image data has alpha channel
-            num_of_channel = 4;
-        }
-        else
-        {
-            std::cout << "cb 2-2" << std::endl;
-            num_of_channel = 3;
-        }
-    }
-    else if( 1 == this->param_.is_color )
-    {
-        std::cout << "cb 3" << std::endl;
-        num_of_channel = 1;
-    }
-    else
-    {
-        std::cout << "cb 4" << std::endl;
-        // TODO: throw exception!!
     }
 
     GstCaps *caps = gst_sample_get_caps(sample);
     // Get a string containg the pixel format, width and height of the image        
     str = gst_caps_get_structure (caps, 0);
-    std::string received_data_type = gst_structure_get_string (str, "format");
+    std::cout << "image type = " << gst_structure_get_string (str, "format") << std::endl;
 
     gst_structure_get_int (str, "width",  &width);
     gst_structure_get_int (str, "height", &height);
 
-    cv::Mat temp;
-
-    if( this->param_.data_type.find("raw") < std::string::npos )
-    {
-        switch( num_of_pixel_byte )
-        {
-            case 1:
-            std::cout << "cb 5-1" << std::endl;
-                pCustomData->frame.create(height,width,CV_8UC(num_of_channel));
-                memcpy( pCustomData->frame.data, info.data, width*height*num_of_pixel_byte );
-
-                temp = cv::Mat(height, width, CV_8UC(num_of_channel));
-                break;
-            case 2:
-                std::cout << "cb 5-2" << std::endl;
-                pCustomData->frame.create(height,width,CV_16UC(num_of_channel));
-                memcpy( pCustomData->frame.data, info.data, width*height*num_of_pixel_byte );
-
-                temp = cv::Mat(height, width, CV_16UC(num_of_channel));
-                break;
-            default:
-                std::cout << "cb 5-3" << std::endl;
-                break;
-        }
-    }
-    else if( this->param_.data_type.find("bayer") < std::string::npos )
-    {
-        std::cout << "cb 6" << std::endl;
-        switch( num_of_pixel_byte )
-        {
-            case 1:
-                std::cout << "cb 6-1" << std::endl;
-                pCustomData->frame.create(height,width,CV_8UC(1));
-                memcpy( pCustomData->frame.data, info.data, width*height*num_of_pixel_byte);
-
-                temp = cv::Mat(height, width, CV_8UC(num_of_channel));
-                break;
-            case 2:
-                std::cout << "cb 6-2" << std::endl;
-                pCustomData->frame.create(height,width,CV_16UC(1));
-                memcpy( pCustomData->frame.data, info.data, width*height*num_of_pixel_byte);
-
-                temp = cv::Mat(height, width, CV_16UC(num_of_channel));
-                break;
-            default:
-                std::cout << "cb 6-3" << std::endl;
-                break;
-        }
-    }
-    else
-    {
-        // no operation
-        std::cout << "cb 7" << std::endl;
-    }
+#if 1 // use 16bit
+    pCustomData->frame.create(height,width,CV_16UC(1));
+    memcpy( pCustomData->frame.data, info.data, width*height*2);
+    cv::Mat temp(height, width, CV_16UC(3));
+    cv::cvtColor(pCustomData->frame, temp, cv::COLOR_BayerRG2RGB);
+#else // use 8bit
+    pCustomData->frame.create(height,width,CV_8UC(1));
+    cv::Mat temp(height, width, CV_16UC(3));
+    memcpy( pCustomData->frame.data, info.data, width*height*2);
+#endif
 
     std::stringstream ss;
     ss << this->save_directory_name_;
     ss << "/";
     ss << "image";
     ss << std::setfill('0') << std::setw(5) << pCustomData->ImageCounter;
-    ss << ".png";
-    cv::imwrite(ss.str().c_str(), pCustomData->frame);
+    //ss << ".png";
+    ss << ".ppm";
+    cv::imwrite(ss.str().c_str(), temp);
 
     // Calling Unref is important!
     gst_buffer_unmap (buffer, &info);

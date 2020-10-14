@@ -11,10 +11,11 @@ set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${LOCAL_INSTALATION_DIRECTORY}/l
 pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0)
 pkg_check_modules(TCAMLIB tcam)
 
-include_directories( include ${CMAKE_CURRENT_BINARY_DIR} ${GSTREAMER_INCLUDE_DIRS} ${TCAMLIB_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} )
+include_directories( include ${CMAKE_CURRENT_BINARY_DIR} ${GSTREAMER_INCLUDE_DIRS} ${TCAMLIB_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
 link_directories(${LOCAL_INSTALATION_DIRECTORY}/lib)
-add_executable(tcamopencvsaveimage main.cpp tcamcamera.cpp )
+add_executable(tcamopencvsaveimage main.cpp tcamcamera.cpp common.cpp image_saver.cpp)
+#add_executable(tcamopencvsaveimage main.cpp tcamcamera.cpp)
 
 target_link_libraries(tcamopencvsaveimage ${TCAMLIB_LIBRARIES} ${GSTREAMER_LIBRARIES} ${OpenCV_LIBS} )
 

@@ -241,7 +241,7 @@ int main(int argc, char **argv)
     scanf("%c",dummyvalue);
 
     cam.stop();
-#endif
+#else
     CameraParam param;
     param.serial_num = TISCAMERA_SERIAL_NO;
     param.data_format = "rggb16";
@@ -268,6 +268,6 @@ int main(int argc, char **argv)
     }
 
     saver->stopCameraCapture();
-
+#endif
     return 0;
 }
