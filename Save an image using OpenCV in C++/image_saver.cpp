@@ -161,9 +161,8 @@ GstFlowReturn ImageSaver::captureCallback(GstAppSink *appsink, gpointer data)
 
     cv::Mat temp;
 
-    if( this->param_.data_type.find("x-raw") >= 0 )
+    if( this->param_.data_type.find("raw") < std::string::npos )
     {
-        std::cout << "cb 5" << std::endl;
         switch( num_of_pixel_byte )
         {
             case 1:
@@ -185,7 +184,7 @@ GstFlowReturn ImageSaver::captureCallback(GstAppSink *appsink, gpointer data)
                 break;
         }
     }
-    else if( this->param_.data_type.find("x-bayer") >= 0 )
+    else if( this->param_.data_type.find("bayer") < std::string::npos )
     {
         std::cout << "cb 6" << std::endl;
         switch( num_of_pixel_byte )
@@ -220,7 +219,7 @@ GstFlowReturn ImageSaver::captureCallback(GstAppSink *appsink, gpointer data)
     ss << "/";
     ss << "image";
     ss << std::setfill('0') << std::setw(5) << pCustomData->ImageCounter;
-    ss << ".jpg";
+    ss << ".png";
     cv::imwrite(ss.str().c_str(), pCustomData->frame);
 
     // Calling Unref is important!
